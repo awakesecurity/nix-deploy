@@ -1,0 +1,30 @@
+name:                nix-deploy
+version:             1.0.0
+synopsis:            Deploy Nix-built software to a NixOS machine
+homepage:            https://github.com/awakesecurity/deploy
+license:             Apache-2.0
+license-file:        LICENSE
+author:              Awake Networks
+maintainer:          opensource@awakenetworks.com
+copyright:           2017 Awake Networks
+category:            System
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+executable nix-deploy
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  ghc-options:         -Wall -Werror
+  build-depends:
+                base                 >= 4.9.0.0  && < 5
+              , optparse-generic     >= 1.2.0    && < 1.3
+              , optparse-applicative >= 0.13.0.0 && < 0.15
+              , neat-interpolation                  < 0.4
+              , text                 >= 0.7      && < 1.3
+              , turtle               >= 1.3.3    && < 1.4.3
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/awakesecurity/deploy.git
