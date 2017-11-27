@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 executable nix-deploy
   hs-source-dirs:      src
   main-is:             Main.hs
-  ghc-options:         -Wall -Werror
+  ghc-options:         -Wall
   build-depends:
                 base                 >= 4.9.0.0  && < 5
               , optparse-generic     >= 1.2.0    && < 1.3
