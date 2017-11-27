@@ -27,4 +27,4 @@ executable nix-deploy
 
 source-repository head
   type:     git
-  location: https://github.com/awakesecurity/deploy.git
+  location: https://github.com/awakesecurity/nix-deploy.git
