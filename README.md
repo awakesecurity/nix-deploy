@@ -62,6 +62,8 @@ Available options:
 $ nix-deploy --to parnell@remote-server --path $(nix-build --no-out-link --attr foo ~/Development/bar/release.nix)
 [+] Downloading: /etc/nix/signing-key.sec
 [+] Installing: /etc/nix/signing-key.sec
+[+] Downloading: /etc/nix/signing-key.pub
+[+] Installing: /etc/nix/signing-key.pub
 copying 178 missing paths (474.70 MiB) to ‘parnell@remote-server’...
 ...
 [+] Copying /nix/store/q4c3avwb0szbsg8pkv7x32gcqz4g0wwa-foo-0.1.0.0
