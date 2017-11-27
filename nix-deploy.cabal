@@ -13,8 +13,8 @@ cabal-version:       >=1.10
 
 description:
 
-  @nix-deploy@ a NixOS system configuration with @nix-deploy system
-  ...@ to a remote machine and switch the machine to that system
+  Deploy a NixOS system configuration with @nix-deploy system ...@ to
+  a remote machine and switch the machine to that system
   configuration. You can also deploy a nix store path with @nix-deploy
   path ...@ to a remote machine or from a remote machine.
   .
