@@ -64,10 +64,6 @@ $ nix-deploy --to parnell@remote-server --path $(nix-build --no-out-link --attr 
 [+] Installing: /etc/nix/signing-key.sec
 [+] Downloading: /etc/nix/signing-key.pub
 [+] Installing: /etc/nix/signing-key.pub
-[+] Running command: sudo nix-build --no-out-link --attr foo /home/parnell/Development/bar/release.nix
-[+] Full command context: sudo NIX_BUILD_HOOK=/nix/store/jj3kq2dmllvkqwwbhnmzbk9hfgncdbvl-nix-1.11.6/libexec/nix/build-remote.pl NIX_PATH=nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos/nixpkgs:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels NIX_REMOTE_SYSTEMS=/tmp/remote-systems1957747793424238335.conf NIX_CURRENT_LOAD=/tmp/build-remote-load30593 nix-build --no-out-link --attr foo /home/parnell/Development/bar/release.nix
-these derivations will be built:
-  /nix/store/kknibvnjwizqv5pnqhypy12qf6dr030g-foo-0.1.0.0.drv
 copying 178 missing paths (474.70 MiB) to ‘parnell@remote-server’...
 ...
 [+] Copying /nix/store/q4c3avwb0szbsg8pkv7x32gcqz4g0wwa-foo-0.1.0.0
