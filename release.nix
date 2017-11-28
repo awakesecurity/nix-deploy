@@ -7,9 +7,6 @@ let
             pkgs.haskell.lib.dontCheck
               (haskellPackagesNew.callPackage ./nix/optparse-applicative.nix { });
 
-          optparse-generic =
-            haskellPackagesNew.callPackage ./nix/optparse-generic.nix { };
-
           Only =
             haskellPackagesNew.callPackage ./nix/Only.nix { };
 

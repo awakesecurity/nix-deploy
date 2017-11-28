@@ -1,23 +1,14 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE QuasiQuotes           #-}
 {-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS -fno-warn-orphans        #-}
 {-# OPTIONS -fno-warn-unused-do-bind #-}
 
 module Main where
 
-import           Control.Applicative    (empty, (<|>))
+import           Control.Applicative    (empty, optional, (<|>))
 import           Control.Exception      (SomeException)
 import qualified Control.Exception
 import           Control.Monad
@@ -30,7 +21,6 @@ import qualified Data.Text              as Text
 import qualified Data.Text.IO           as Text.IO
 import qualified NeatInterpolation      as Neat
 import qualified Options.Applicative    as Options
-import           Options.Generic
 import           Prelude                hiding (FilePath)
 import qualified System.IO
 import           Turtle                 (ExitCode (..), FilePath, fp, liftIO, s,
@@ -38,27 +28,83 @@ import           Turtle                 (ExitCode (..), FilePath, fp, liftIO, s,
 import qualified Turtle
 import           Turtle.Line
 
-data Options w
+data Options
     = Path
       { direction      :: Direction
-      , sudo           :: w ::: Bool               <?> "Prepend with sudo"
-      , noSign         :: w ::: Bool               <?> "Don't sign payload (not recommended)"
-      , path           :: w ::: Maybe FilePath     <?> "Path to deploy"
-      , profilePath    :: w ::: Maybe FilePath     <?> "Path to parent profile directory (default: /nix/var/nix/profiles)"
-      , profileName    :: w ::: Maybe Line         <?> "Name of profile to set (example: upgrade-tools)"
-
+      , sudo           :: Bool
+      , noSign         :: Bool
+      , path           :: Maybe FilePath
+      , profilePath    :: Maybe FilePath
+      , profileName    :: Maybe Line
       }
     | System
       { direction      :: Direction
-      , noSign         :: w ::: Bool               <?> "Don't sign payload (not recommended)"
-      , path           :: w ::: Maybe FilePath     <?> "Path to deploy"
-      , systemName     :: w ::: Maybe Line         <?> "Alternative system profile name (default: system)"
+      , noSign         :: Bool
+      , path           :: Maybe FilePath
+      , systemName     :: Maybe Line
       , switchMethod   :: Maybe SwitchMethod
       }
-  deriving (Generic)
+  deriving Show
 
-instance ParseRecord (Options Wrapped)
-deriving instance Show (Options Unwrapped)
+optionsParser :: Options.Parser Options
+optionsParser = Options.subparser $
+  cmd "path" pathOptionsParser <>
+  cmd "system" systemOptionsParser
+  where
+    cmd name parser = Options.command name $
+      Options.info (Options.helper <*> parser) mempty
+
+pathOptionsParser :: Options.Parser Options
+pathOptionsParser =
+  Path
+  <$> directionParser
+  <*> sudoParser
+  <*> noSignParser
+  <*> optional pathParser
+  <*> optional profilePathParser
+  <*> optional profileNameParser
+  where
+
+    sudoParser = Options.switch $
+      Options.long "sudo" <>
+      Options.help "Prepend with sudo"
+
+    profilePathParser = fmap Turtle.fromString $ Options.strOption $
+      Options.metavar "FILEPATH" <>
+      Options.long "profilePath" <>
+      Options.help "Path to parent profile directory \
+                   \(default: /nix/var/nix/profiles)"
+
+    profileNameParser = Options.option lineReader $
+      Options.long "profileName" <>
+      Options.help "Name of profile to set (example: upgrade-tools)" <>
+      Options.metavar "LINE"
+
+systemOptionsParser :: Options.Parser Options
+systemOptionsParser =
+  System
+  <$> directionParser
+  <*> noSignParser
+  <*> optional pathParser
+  <*> optional systemNameParser
+  <*> optional switchMethodParser
+  where
+
+    systemNameParser = Options.option lineReader $
+      Options.metavar "LINE" <>
+      Options.long "systemName" <>
+      Options.help "Alternative system profile name (default: system)"
+
+noSignParser :: Options.Parser Bool
+noSignParser = Options.switch $
+  Options.long "noSign" <>
+  Options.help "Don't sign payload (not recommended)"
+
+pathParser :: Options.Parser FilePath
+pathParser = fmap Turtle.fromString $ Options.strOption $
+  Options.metavar "FILEPATH" <>
+  Options.long "path" <>
+  Options.help "Path to deploy"
 
 data SwitchMethod
     = Switch
@@ -67,77 +113,59 @@ data SwitchMethod
     | DryActivate
     | Reboot
     -- ^ Same as `Boot` except followed by a @reboot@
-    deriving (Eq, Show, ParseFields)
-
-instance ParseField SwitchMethod where
-  parseField _ _ _ =
-        Options.flag' Switch      (Options.long "switch")
-    <|> Options.flag' Boot        (Options.long "boot")
-    <|> Options.flag' Test        (Options.long "test")
-    <|> Options.flag' DryActivate (Options.long "dry-activate")
-    <|> Options.flag' Reboot      (Options.long "reboot")
-
-instance ParseRecord SwitchMethod where
-  parseRecord = fmap Options.Generic.getOnly parseRecord
+    deriving (Eq, Show)
 
 renderSwitch :: SwitchMethod -> Text
-renderSwitch Switch      = "switch"
-renderSwitch Boot        = "boot"
-renderSwitch Test        = "test"
-renderSwitch DryActivate = "dry-activate"
-renderSwitch Reboot      = "boot"
+renderSwitch = \case
+  Switch      -> "switch"
+  Boot        -> "boot"
+  Test        -> "test"
+  DryActivate -> "dry-activate"
+  Reboot      -> "boot"
+
+switchMethodParser :: Options.Parser SwitchMethod
+switchMethodParser =
+  f Switch      "switch" <|>
+  f Boot        "boot" <|>
+  f Test        "test" <|>
+  f DryActivate "dry-activate" <|>
+  f Reboot      "reboot"
+  where
+    f value name = Options.flag' value (Options.long name)
 
 data Direction = To Line | From Line
-  deriving (Show, ParseFields)
+  deriving Show
 
-instance ParseField Direction where
-  parseField _ _ _ = (To <$> parseTo) <|> (From <$> parseFrom)
-    where
-      parseTo    = parser "to" "Deploy software to this address (ex: user@192.168.0.1)"
-      parseFrom  = parser "from" "Deploy software from this address (ex: user@192.168.0.1)"
-      line       = Options.maybeReader (textToLine . Text.pack)
-      parser l h =
-        (Options.option line $
-         (  Options.metavar "USER@HOST"
-         <> Options.long    l
-         <> Options.help    h
-         )
-        )
+directionParser :: Options.Parser Direction
+directionParser = directionToParser <|> directionFromParser
 
-instance ParseRecord Direction where
-  parseRecord = fmap Options.Generic.getOnly parseRecord
+directionToParser :: Options.Parser Direction
+directionToParser = fmap To $ Options.option lineReader $
+  Options.metavar "USER@HOST" <>
+  Options.long "to" <>
+  Options.help "Deploy software to this address (ex: user@192.168.0.1)"
 
-instance ParseRecord Line where
-  parseRecord = fmap Options.Generic.getOnly parseRecord
+directionFromParser :: Options.Parser Direction
+directionFromParser = fmap From $ Options.option lineReader $
+  Options.metavar "USER@HOST" <>
+  Options.long "from" <>
+  Options.help "Deploy software from this address (ex: user@192.168.0.1)"
 
-instance ParseFields Line where
-
-instance ParseField Line where
-  parseField h m c = do
-    let metavar = "LINE"
-    let line    = Options.maybeReader (textToLine . Text.pack)
-    case m of
-      Nothing ->
-        (Options.argument line
-         (  Options.metavar metavar
-         <> foldMap (Options.help . Text.unpack) h))
-      Just name ->
-        (Options.option line
-         (  Options.metavar metavar
-         <> foldMap Options.short c
-         <> Options.long (Text.unpack name)
-         <> foldMap (Options.help . Text.unpack) h))
+lineReader :: Options.ReadM Line
+lineReader = Options.maybeReader (textToLine . Text.pack)
 
 renderDirection :: Direction -> (Text, Line)
 renderDirection (To target)   = ("to",   target)
 renderDirection (From target) = ("from", target)
 
-progSummary :: Text
-progSummary = "Deploy software or an entire NixOS system configuration to another NixOS system"
+optionsParserInfo :: Options.ParserInfo Options
+optionsParserInfo = Options.info (Options.helper <*> optionsParser) $
+  Options.header "Deploy software or an entire NixOS system configuration to \
+                 \another NixOS system"
 
 main :: IO ()
 main =
-  unwrapRecord progSummary >>= \case
+  Options.execParser optionsParserInfo >>= \case
     Path{..}   -> do
       pathText <-
         case path of
@@ -240,7 +268,7 @@ main =
     You need `sudo` privileges on the target machine
 |]))
       when (method == Reboot)$ do
-        let success = 
+        let success =
               stderrLines [Neat.text|[+] $pathText successfully activated, $targetText is rebooting|]
         rebootCmd targetText >>= \case
           -- This is the exit code returned by `ssh` when the machine closes
