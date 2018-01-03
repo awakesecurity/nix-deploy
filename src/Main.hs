@@ -70,6 +70,7 @@ data SwitchMethod
     deriving (Eq, Show, ParseFields)
 
 instance ParseField SwitchMethod where
+  readField = Options.readerError "Internal, fatal error: unexpected use of readField"
   parseField _ _ _ =
         Options.flag' Switch      (Options.long "switch")
     <|> Options.flag' Boot        (Options.long "boot")
@@ -91,6 +92,7 @@ data Direction = To Line | From Line
   deriving (Show, ParseFields)
 
 instance ParseField Direction where
+  readField = Options.readerError "Internal, fatal error: unexpected use of readField"
   parseField _ _ _ = (To <$> parseTo) <|> (From <$> parseFrom)
     where
       parseTo    = parser "to" "Deploy software to this address (ex: user@192.168.0.1)"
@@ -113,6 +115,7 @@ instance ParseRecord Line where
 instance ParseFields Line where
 
 instance ParseField Line where
+  readField = Options.maybeReader (textToLine . Text.pack)
   parseField h m c = do
     let metavar = "LINE"
     let line    = Options.maybeReader (textToLine . Text.pack)
