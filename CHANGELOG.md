@@ -1,3 +1,9 @@
+# 1.0.2
+
+## Changed
+
+- Relaxed the upper bound of the `turtle` dependency
+
 # 1.0.1
 
 ## Added
