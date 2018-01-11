@@ -2,7 +2,7 @@
 
 ## Changed
 
-- Relaxed the upper bound of the `turtle` dependency
+- Relaxed the upper bound of the `turtle` library dependency to `1.5`
 
 # 1.0.1
 
