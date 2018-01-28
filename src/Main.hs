@@ -218,7 +218,7 @@ main =
 
       let method = fromMaybe Test switchMethod
       let switchSystem =
-            Turtle.procs "ssh"
+            Turtle.proc "ssh"
               [ targetText
               , "sudo"
               , "/nix/var/nix/profiles/system/bin/switch-to-configuration"
@@ -236,12 +236,26 @@ main =
 
       setProfile direction True profileText pathText
 
-      -- Switch to the new system configuration
-      liftIO (Control.Exception.catch switchSystem (errorHandler [Neat.text|
-[x] Failed to switch $targetText to $pathText
+      let successMsg = [Neat.text|[+] Succeeded switching $targetText to $pathText|]
 
-    You need `sudo` privileges on the target machine
-|]))
+      switchSystem >>= \case
+        ExitSuccess -> stderrLines successMsg
+
+        -- This is the exit code returned by switch-to-configuration
+        -- if the configuration is successfully switched-to (using
+        -- `--switch`) but a service failed to start or restart during
+        -- the switch. We want to treat this as success but should
+        -- tell the user what happened...
+        ExitFailure 4 ->
+          stderrLines [Neat.text|
+            $successMsg
+
+                However, some services failed to start or restart.
+            |]
+
+        ExitFailure _ ->
+          Turtle.die [Neat.text|[x] Failed to switch $targetText to $pathText|]
+
       when (method == Reboot)$ do
         let success = 
               stderrLines [Neat.text|[+] $pathText successfully activated, $targetText is rebooting|]
