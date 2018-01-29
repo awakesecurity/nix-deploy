@@ -50,6 +50,7 @@ data Options w
       }
     | System
       { direction      :: Direction
+      , failOnPartialSuccess :: w ::: Bool         <?> "Fail if system activation partially succeeds"
       , noSign         :: w ::: Bool               <?> "Don't sign payload (not recommended)"
       , path           :: w ::: Maybe FilePath     <?> "Path to deploy"
       , systemName     :: w ::: Maybe Line         <?> "Alternative system profile name (default: system)"
@@ -237,6 +238,11 @@ main =
       setProfile direction True profileText pathText
 
       let successMsg = [text|[+] Succeeded switching $targetText to $pathText|]
+      let partialMsg =  [text|
+            $successMsg
+
+                However, some services failed to start or restart.
+            |]
 
       switchSystem >>= \case
         ExitSuccess -> stderrLines successMsg
@@ -246,12 +252,8 @@ main =
         -- `--switch`) but a service failed to start or restart during
         -- the switch. We want to treat this as success but should
         -- tell the user what happened...
-        ExitFailure 4 ->
-          stderrLines [text|
-            $successMsg
-
-                However, some services failed to start or restart.
-            |]
+        ExitFailure 4 | failOnPartialSuccess -> Turtle.die  partialMsg
+                      | otherwise            -> stderrLines partialMsg
 
         ExitFailure _ ->
           Turtle.die [text|[x] Failed to switch $targetText to $pathText|]
