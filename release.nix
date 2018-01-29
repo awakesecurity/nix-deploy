@@ -1,28 +1,25 @@
 let
-  config = { allowUnfree = true;
-    packageOverrides = pkgs: {
-      haskellPackages = pkgs.haskellPackages.override {
+  config   = { allowUnfree = true; };
+  overlays = [
+    (newPkgs: oldPkgs: {
+      haskellPackages = oldPkgs.haskellPackages.override {
         overrides = haskellPackagesNew: haskellPackagesOld: {
           optparse-applicative =
-            pkgs.haskell.lib.dontCheck
+            oldPkgs.haskell.lib.dontCheck
               (haskellPackagesNew.callPackage ./nix/optparse-applicative.nix { });
 
           optparse-generic =
             haskellPackagesNew.callPackage ./nix/optparse-generic.nix { };
 
-          Only =
-            haskellPackagesNew.callPackage ./nix/Only.nix { };
-
-          turtle =
-            haskellPackagesNew.callPackage ./nix/turtle.nix { };
-
           nix-deploy =
             haskellPackagesNew.callPackage ./default.nix { };
         };
       };
-    };
-  };
+    })
+  ];
 
-  pkgs = import <nixpkgs> { inherit config; };
+  nixpkgs = import ./nix/17_09.nix;
+
+  pkgs = import nixpkgs { inherit config overlays; };
 in
   { inherit (pkgs.haskellPackages) nix-deploy; }
