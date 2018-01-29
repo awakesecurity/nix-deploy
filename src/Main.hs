@@ -50,6 +50,7 @@ data Options w
       }
     | System
       { direction      :: Direction
+      , failOnPartialSuccess :: w ::: Bool         <?> "Fail if system activation partially succeeds"
       , noSign         :: w ::: Bool               <?> "Don't sign payload (not recommended)"
       , path           :: w ::: Maybe FilePath     <?> "Path to deploy"
       , systemName     :: w ::: Maybe Line         <?> "Alternative system profile name (default: system)"
@@ -218,7 +219,7 @@ main =
 
       let method = fromMaybe Test switchMethod
       let switchSystem =
-            Turtle.procs "ssh"
+            Turtle.proc "ssh"
               [ targetText
               , "sudo"
               , "/nix/var/nix/profiles/system/bin/switch-to-configuration"
@@ -236,12 +237,27 @@ main =
 
       setProfile direction True profileText pathText
 
-      -- Switch to the new system configuration
-      liftIO (Control.Exception.catch switchSystem (errorHandler [text|
-[x] Failed to switch $targetText to $pathText
+      let successMsg = [text|[+] Succeeded switching $targetText to $pathText|]
+      let partialMsg =  [text|
+            $successMsg
 
-    You need `sudo` privileges on the target machine
-|]))
+                However, some services failed to start or restart.
+            |]
+
+      switchSystem >>= \case
+        ExitSuccess -> stderrLines successMsg
+
+        -- This is the exit code returned by switch-to-configuration
+        -- if the configuration is successfully switched-to (using
+        -- `--switch`) but a service failed to start or restart during
+        -- the switch. We want to treat this as success but should
+        -- tell the user what happened...
+        ExitFailure 4 | failOnPartialSuccess -> Turtle.die  partialMsg
+                      | otherwise            -> stderrLines partialMsg
+
+        ExitFailure _ ->
+          Turtle.die [text|[x] Failed to switch $targetText to $pathText|]
+
       when (method == Reboot)$ do
         let success = 
               stderrLines [text|[+] $pathText successfully activated, $targetText is rebooting|]
