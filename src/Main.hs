@@ -28,7 +28,7 @@ import           Data.Monoid            ((<>))
 import           Data.Text              (Text)
 import qualified Data.Text              as Text
 import qualified Data.Text.IO           as Text.IO
-import qualified NeatInterpolation      as Neat
+import           NeatInterpolation
 import qualified Options.Applicative    as Options
 import           Options.Generic
 import           Prelude                hiding (FilePath)
@@ -153,7 +153,7 @@ main =
       let sign = not noSign
       when sign $ exchangeKeys targetText
 
-      stderrLines [Neat.text|[+] Copying $pathText|]
+      stderrLines [text|[+] Copying $pathText|]
       let transfer =
             Turtle.procs "nix-copy-closure"
               ((if sign then ["--sign"] else []) <>
@@ -165,7 +165,7 @@ main =
               empty
 
       -- Transfer path to target
-      liftIO (Control.Exception.catch transfer (errorHandler [Neat.text|
+      liftIO (Control.Exception.catch transfer (errorHandler [text|
 [x] Failed transferring $pathText $txDir $targetText
 
     1. $pathText does not exist
@@ -204,7 +204,7 @@ main =
       let sign = not noSign
       when sign $ exchangeKeys targetText
 
-      stderrLines [Neat.text|[+] Installing system: $pathText|]
+      stderrLines [text|[+] Installing system: $pathText|]
 
       let transfer =
             Turtle.procs "nix-copy-closure"
@@ -227,7 +227,7 @@ main =
               empty
 
       -- Transfer path to target
-      liftIO (Control.Exception.catch transfer (errorHandler [Neat.text|
+      liftIO (Control.Exception.catch transfer (errorHandler [text|
 [x] Failed transferring $pathText $txDir $targetText
 
     1. $pathText may not exist, make sure you built it with nix-build first
@@ -237,14 +237,14 @@ main =
       setProfile direction True profileText pathText
 
       -- Switch to the new system configuration
-      liftIO (Control.Exception.catch switchSystem (errorHandler [Neat.text|
+      liftIO (Control.Exception.catch switchSystem (errorHandler [text|
 [x] Failed to switch $targetText to $pathText
 
     You need `sudo` privileges on the target machine
 |]))
       when (method == Reboot)$ do
         let success = 
-              stderrLines [Neat.text|[+] $pathText successfully activated, $targetText is rebooting|]
+              stderrLines [text|[+] $pathText successfully activated, $targetText is rebooting|]
         rebootCmd targetText >>= \case
           -- This is the exit code returned by `ssh` when the machine closes
           -- the connection due to a successful reboot.  We can't really
@@ -252,7 +252,7 @@ main =
           -- unfortunately, so we have to assume that this meant success
           ExitFailure 255 -> success
           ExitFailure _   ->
-            Turtle.die [Neat.text|[x] Failed to reboot $targetText after activating $pathText at $profileText|]
+            Turtle.die [text|[x] Failed to reboot $targetText after activating $pathText at $profileText|]
           -- The command should always fail because the remote machine closes
           -- connection when rebooting, but we include this case for
           -- completeness
@@ -270,7 +270,7 @@ errorHandler msg err = do
   let excText0 = Text.justifyRight 4 ' ' <$> Text.lines (Text.pack $ show err)
   let excText1 = Text.unlines excText0
 
-  Turtle.die [Neat.text|
+  Turtle.die [text|
 $msg
 
 Original error was:
@@ -280,7 +280,7 @@ $excText1
 
 
 rebootCmd :: MonadIO io => Text -> io Turtle.ExitCode
-rebootCmd target = Turtle.shell [Neat.text|ssh $target sudo reboot|] empty
+rebootCmd target = Turtle.shell [text|ssh $target sudo reboot|] empty
 
 pathFromStdin :: IO Text
 pathFromStdin = do
@@ -314,7 +314,7 @@ exchangeKeys host = do
   let handler0 :: SomeException -> IO ()
       handler0 e = do
           let exceptionText = Text.pack (show e)
-          let msg           = [Neat.text|
+          let msg           = [text|
 [x] Could not ensure that the remote machine has signing keys installed
 
     Debugging tips:
@@ -367,7 +367,7 @@ exchangeKeys host = do
               handler1 e = do
                   let pathText      = Turtle.format fp path
                   let exceptionText = Text.pack (show e)
-                  let msg           = [Neat.text|
+                  let msg           = [text|
 [x] Could not download: $pathText
 
     Debugging tips:
@@ -420,7 +420,7 @@ exchangeKeys host = do
               handler2 e = do
                   let pathText      = Turtle.format fp path
                   let exceptionText = Text.pack (show e)
-                  let msg           = [Neat.text|
+                  let msg           = [text|
 [x] Could not install: $pathText
 
     Debugging tips:
@@ -492,5 +492,5 @@ setProfile direction sudo profileText pathText = do
       return command
 
   -- Set or create a profile pointing at the transferred path
-  let msg = [Neat.text|[x] Failed setting $profileText to $pathText|]
+  let msg = [text|[x] Failed setting $profileText to $pathText|]
   liftIO (Control.Exception.handle (errorHandler msg) command)
