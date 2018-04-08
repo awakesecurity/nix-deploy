@@ -22,6 +22,7 @@ import           Control.Exception      (SomeException)
 import qualified Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
+import qualified Data.ByteString.Lazy   as BL
 import qualified Data.List.NonEmpty     as NonEmpty
 import           Data.Maybe
 import           Data.Monoid            ((<>))
@@ -259,7 +260,7 @@ main =
           Turtle.die [text|[x] Failed to switch $targetText to $pathText|]
 
       when (method == Reboot)$ do
-        let success = 
+        let success =
               stderrLines [text|[+] $pathText successfully activated, $targetText is rebooting|]
         rebootCmd targetText >>= \case
           -- This is the exit code returned by `ssh` when the machine closes
@@ -412,31 +413,42 @@ exchangeKeys host = do
 
           liftIO (Control.Exception.handle handler1 download)
 
-          exitCode <- Turtle.shell "sudo -n true 2>/dev/null" empty
+          new <- liftIO . BL.readFile . Text.unpack $
+            Turtle.format fp localPath
 
-          -- NB: path shouldn't is a FilePath and won't have any
-          -- newlines, so this should be okay
-          Turtle.err (Turtle.unsafeTextToLine $ Turtle.format ("[+] Installing: "%fp) path)
+          old <- liftIO . BL.readFile . Text.unpack $
+            Turtle.format fp path
 
-          case exitCode of
-              ExitFailure _ -> do
-                  Turtle.err ""
-                  Turtle.err "    This will prompt you for your `sudo` password"
-              _             -> do
-                  return ()
+          if new == old
+              then do
+                  let same = Turtle.format ("[+] Unchanged: "%fp) path
+                  mapM_ Turtle.err (Turtle.Line.textToLines same)
+              else do
+                  exitCode <- Turtle.shell "sudo -n true 2>/dev/null" empty
 
-          let install =
-                  Turtle.procs "sudo"
-                      [ "mv"
-                      , Turtle.format fp localPath
-                      , Turtle.format fp path
-                      ]
-                      empty
-          let handler2 :: SomeException -> IO ()
-              handler2 e = do
-                  let pathText      = Turtle.format fp path
-                  let exceptionText = Text.pack (show e)
-                  let msg           = [text|
+                  -- NB: path shouldn't is a FilePath and won't have any
+                  -- newlines, so this should be okay
+                  Turtle.err (Turtle.unsafeTextToLine $ Turtle.format ("[+] Installing: "%fp) path)
+
+                  case exitCode of
+                      ExitFailure _ -> do
+                          Turtle.err ""
+                          Turtle.err "    This will prompt you for your `sudo` password"
+                      _             -> do
+                          return ()
+
+                  let install =
+                          Turtle.procs "sudo"
+                              [ "mv"
+                              , Turtle.format fp localPath
+                              , Turtle.format fp path
+                              ]
+                              empty
+                  let handler2 :: SomeException -> IO ()
+                      handler2 e = do
+                          let pathText      = Turtle.format fp path
+                          let exceptionText = Text.pack (show e)
+                          let msg           = [text|
 [x] Could not install: $pathText
 
     Debugging tips:
@@ -449,9 +461,9 @@ exchangeKeys host = do
 
     Original error: $exceptionText
 |]
-                  Turtle.die msg
+                          Turtle.die msg
 
-          liftIO (Control.Exception.handle handler2 install)
+                  liftIO (Control.Exception.handle handler2 install)
 
   mirror privateKey
   mirror publicKey
