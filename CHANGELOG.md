@@ -1,3 +1,10 @@
+# Unreleased
+
+## Changed
+
+- Relaxed the upper bound of the `turtle` library dependency to `1.6`
+- Relaxed the upper bound of the `optparse-generic` library dependency to `1.4`
+
 # 1.0.2
 
 ## Changed
