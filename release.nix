@@ -1,5 +1,8 @@
+{ nixpkgs ? import ./nix/nixpkgs.nix }:
+
 let
-  config   = { allowUnfree = true; };
+  config = { allowUnfree = true; };
+
   overlays = [
     (newPkgs: oldPkgs: {
       haskellPackages = oldPkgs.haskellPackages.override {
@@ -17,8 +20,6 @@ let
       };
     })
   ];
-
-  nixpkgs = import ./nix/17_09.nix;
 
   pkgs = import nixpkgs { inherit config overlays; };
 in
