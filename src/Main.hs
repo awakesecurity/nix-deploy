@@ -297,7 +297,7 @@ $excText1
 
 
 rebootCmd :: MonadIO io => Text -> io Turtle.ExitCode
-rebootCmd target = Turtle.shell [text|ssh $target sudo reboot|] empty
+rebootCmd target = Turtle.shell [text|ssh -o 'ServerAliveInterval=1' $target sudo reboot|] empty
 
 pathFromStdin :: IO Text
 pathFromStdin = do
