@@ -1,5 +1,5 @@
 name:                nix-deploy
-version:             1.0.3
+version:             1.0.4
 synopsis:            Deploy Nix-built software to a NixOS machine
 homepage:            https://github.com/awakesecurity/nix-deploy#readme
 license:             Apache-2.0
