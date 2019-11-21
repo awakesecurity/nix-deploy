@@ -1,3 +1,9 @@
+# 1.0.4
+
+## Changed
+
+- Enable ssh keep live in issuing the reboot command
+
 # 1.0.3
 
 ## Changed
