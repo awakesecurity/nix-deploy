@@ -146,8 +146,13 @@ main =
     Path{..}   -> do
       pathText <-
         case path of
-          Just p  -> pure (Turtle.format fp p)
-          Nothing -> liftIO pathFromStdin
+          Just p -> do
+              p' <- Turtle.realpath p
+
+              pure (Turtle.format fp p')
+
+          Nothing -> do
+              liftIO pathFromStdin
 
       let (txDir, target) = renderDirection direction
       let targetText = lineToText target
@@ -158,12 +163,11 @@ main =
       stderrLines [text|[+] Copying $pathText|]
       let transfer =
             Turtle.procs "nix-copy-closure"
-              ((if sign then ["--sign"] else []) <>
               [ (Turtle.format ("--"%s) txDir)
               , "--gzip"
               , targetText
               , pathText
-              ])
+              ]
               empty
 
       -- Transfer path to target
@@ -189,8 +193,13 @@ main =
 
       pathText <-
         case path of
-          Just p  -> pure (Turtle.format fp p)
-          Nothing -> liftIO pathFromStdin
+          Just p -> do
+              p' <- Turtle.realpath p
+
+              pure (Turtle.format fp p')
+
+          Nothing -> do
+              liftIO pathFromStdin
 
       let profileText =
             case systemName of
@@ -210,12 +219,11 @@ main =
 
       let transfer =
             Turtle.procs "nix-copy-closure"
-              ((if sign then ["--sign"] else []) <>
               [ (Turtle.format ("--"%s) txDir)
               , "--gzip"
               , targetText
               , pathText
-              ])
+              ]
               empty
 
       let method = fromMaybe Test switchMethod
