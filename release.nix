@@ -1,26 +1,33 @@
-{ nixpkgs ? import ./nix/nixpkgs.nix }:
+let
+  pinnedNixpkgs = builtins.fetchTarball {
+    url    = "https://github.com/NixOS/nixpkgs/archive/7c06b2145ddc21a20c7f178c3391bdaf8497fae2.tar.gz";
+    sha256 = "1a0aaybapbcv39dvji0l138lvwimyr9skx5mz88y65ysf7zvlpwi";
+  };
+
+in
+
+{ nixpkgs ? pinnedNixpkgs }:
 
 let
-  config = { allowUnfree = true; };
+  config = { };
 
   overlays = [
-    (newPkgs: oldPkgs: {
-      haskellPackages = oldPkgs.haskellPackages.override {
-        overrides = haskellPackagesNew: haskellPackagesOld: {
-          optparse-applicative =
-            oldPkgs.haskell.lib.dontCheck
-              (haskellPackagesNew.callPackage ./nix/optparse-applicative.nix { });
+    (pkgsNew: pkgsOld: {
+      haskellPackages = pkgsOld.haskellPackages.override (old: {
+        overrides =
+          let
+            directoryOverride =
+              pkgsNew.haskell.lib.packagesFromDirectory { directory = ./nix; };
 
-          optparse-generic =
-            haskellPackagesNew.callPackage ./nix/optparse-generic.nix { };
-
-          nix-deploy =
-            haskellPackagesNew.callPackage ./default.nix { };
-        };
-      };
+          in
+            pkgsNew.lib.composeExtensions
+              (old.overrides or (_: _: { }))
+              directoryOverride;
+      });
     })
   ];
 
   pkgs = import nixpkgs { inherit config overlays; };
+
 in
   { inherit (pkgs.haskellPackages) nix-deploy; }

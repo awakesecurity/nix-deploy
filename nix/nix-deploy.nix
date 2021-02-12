@@ -4,7 +4,7 @@
 mkDerivation {
   pname = "nix-deploy";
   version = "1.0.5";
-  src = ./.;
+  src = ./..;
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
