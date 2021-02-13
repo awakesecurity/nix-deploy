@@ -17,27 +17,37 @@
 
 module Main where
 
-import           Control.Applicative    (empty, (<|>))
-import           Control.Exception      (SomeException)
+import Control.Applicative (empty, (<|>))
+import Control.Exception (SomeException)
+import Control.Monad
+import Control.Monad.IO.Class (MonadIO)
+import Data.Maybe
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import NeatInterpolation
+import Prelude hiding (FilePath)
+import Turtle (ExitCode (..), FilePath, fp, liftIO, s, (%), (</>))
+import Turtle.Line
+
+import Options.Generic
+    ( ParseField(..)
+    , ParseFields
+    , ParseRecord(..)
+    , Unwrapped
+    , Wrapped
+    , (:::)
+    , type (<?>)
+    )
+
 import qualified Control.Exception
-import           Control.Monad
-import           Control.Monad.IO.Class (MonadIO)
 import qualified Data.ByteString.Lazy   as BL
 import qualified Data.List.NonEmpty     as NonEmpty
-import           Data.Maybe
-import           Data.Monoid            ((<>))
-import           Data.Text              (Text)
 import qualified Data.Text              as Text
 import qualified Data.Text.IO           as Text.IO
-import           NeatInterpolation
 import qualified Options.Applicative    as Options
-import           Options.Generic
-import           Prelude                hiding (FilePath)
+import qualified Options.Generic
 import qualified System.IO
-import           Turtle                 (ExitCode (..), FilePath, fp, liftIO, s,
-                                         (%), (</>))
 import qualified Turtle
-import           Turtle.Line
 
 data Options w
     = Path
@@ -119,16 +129,17 @@ instance ParseFields Line where
 instance ParseField Line where
   readField = Options.maybeReader (textToLine . Text.pack)
   parseField h m c = do
-    let metavar = "LINE"
-    let line    = Options.maybeReader (textToLine . Text.pack)
+    let metavar_ = "LINE"
+    let line     = Options.maybeReader (textToLine . Text.pack)
+
     case m of
       Nothing ->
         (Options.argument line
-         (  Options.metavar metavar
+         (  Options.metavar metavar_
          <> foldMap (Options.help . Text.unpack) h))
       Just name ->
         (Options.option line
-         (  Options.metavar metavar
+         (  Options.metavar metavar_
          <> foldMap Options.short c
          <> Options.long (Text.unpack name)
          <> foldMap (Options.help . Text.unpack) h))
@@ -142,7 +153,7 @@ progSummary = "Deploy software or an entire NixOS system configuration to anothe
 
 main :: IO ()
 main =
-  unwrapRecord progSummary >>= \case
+  Options.Generic.unwrapRecord progSummary >>= \case
     Path{..}   -> do
       pathText <-
         case path of
@@ -305,7 +316,7 @@ $excText1
 
 
 rebootCmd :: MonadIO io => Text -> io Turtle.ExitCode
-rebootCmd target = Turtle.shell [text|ssh -o 'ServerAliveInterval=1' $target sudo reboot|] empty
+rebootCmd target = Turtle.shell [text|ssh -o 'ServerAliveInterval=1' -o 'ServerAliveCountMax=7' $target sudo reboot|] empty
 
 pathFromStdin :: IO Text
 pathFromStdin = do
