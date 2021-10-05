@@ -24,7 +24,7 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import NeatInterpolation
+import NeatInterpolation (text)
 import Prelude hiding (FilePath)
 import Turtle (ExitCode (..), FilePath, fp, liftIO, s, (%), (</>))
 import Turtle.Line
