@@ -1,9 +1,13 @@
 let
+  rev = "9899f2b5602a6a8be6e79725d39856025861a5d0";
+
+  sha256 = "0zb05xxhy1zynpf9014a3jrv6hibs0zz855vc8x4x5hcjpx34dlc";
+
   pkgs =
     import
       (builtins.fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/7c06b2145ddc21a20c7f178c3391bdaf8497fae2.tar.gz";
-        sha256 = "1a0aaybapbcv39dvji0l138lvwimyr9skx5mz88y65ysf7zvlpwi";
+        url = "https://github.com/NixOS/nixpkgs/archive/${rev}.tar.gz";
+        inherit sha256;
       })
       { config = { }; };
 
