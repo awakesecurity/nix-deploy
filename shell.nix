@@ -1,1 +1,1 @@
-(import ./default.nix { }).nix-deploy.env
+(import ./default.nix).env
