@@ -83,7 +83,7 @@ data SwitchMethod
 
 instance ParseField SwitchMethod where
   readField = Options.readerError "Internal, fatal error: unexpected use of readField"
-  parseField _ _ _ =
+  parseField _ _ _ _ =
         Options.flag' Switch      (Options.long "switch")
     <|> Options.flag' Boot        (Options.long "boot")
     <|> Options.flag' Test        (Options.long "test")
@@ -105,7 +105,7 @@ data Direction = To Line | From Line
 
 instance ParseField Direction where
   readField = Options.readerError "Internal, fatal error: unexpected use of readField"
-  parseField _ _ _ = (To <$> parseTo) <|> (From <$> parseFrom)
+  parseField _ _ _ _ = (To <$> parseTo) <|> (From <$> parseFrom)
     where
       parseTo    = parser "to" "Deploy software to this address (ex: user@192.168.0.1)"
       parseFrom  = parser "from" "Deploy software from this address (ex: user@192.168.0.1)"
@@ -128,21 +128,16 @@ instance ParseFields Line where
 
 instance ParseField Line where
   readField = Options.maybeReader (textToLine . Text.pack)
-  parseField h m c = do
+  parseField help long short _value = do
     let metavar_ = "LINE"
     let line     = Options.maybeReader (textToLine . Text.pack)
 
-    case m of
-      Nothing ->
-        (Options.argument line
-         (  Options.metavar metavar_
-         <> foldMap (Options.help . Text.unpack) h))
-      Just name ->
-        (Options.option line
-         (  Options.metavar metavar_
-         <> foldMap Options.short c
-         <> Options.long (Text.unpack name)
-         <> foldMap (Options.help . Text.unpack) h))
+    Options.option line
+      (  Options.metavar metavar_
+      <> foldMap Options.short short
+      <> foldMap (Options.long . Text.unpack) long
+      <> foldMap (Options.help . Text.unpack) help
+      )
 
 renderDirection :: Direction -> (Text, Line)
 renderDirection (To target)   = ("to",   target)
