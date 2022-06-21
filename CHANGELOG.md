@@ -1,3 +1,10 @@
+# 1.0.6
+
+## Changed
+
+- Build against `optparse-generic-1.4`
+- Increase timeout for `reboot`
+
 # 1.0.5
 
 - Support Nix 2
