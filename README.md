@@ -1,3 +1,5 @@
+**NOTE**: _This repository is no longer supported or updated by Awake Security / Arista Networks. If you wish to continue to develop this code yourself, we recommend you fork it._
+
 # `nix-deploy`
 Deploy a NixOS system configuration with `nix-deploy system ...` to a remote
 machine and switch the machine to that system configuration. You can also deploy
